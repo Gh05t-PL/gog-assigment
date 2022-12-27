@@ -9,7 +9,6 @@ RUN php -r "copy('https://getcomposer.org/download/2.1.9/composer.phar', 'compos
 
 RUN install-php-extensions \
     amqp \
-    mongodb \
     redis \
     bcmath \
     sockets \
