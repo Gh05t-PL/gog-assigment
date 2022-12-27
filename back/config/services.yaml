@@ -18,10 +18,37 @@ services:
         exclude:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
+            - '../src/DTO/'
             - '../src/Kernel.php'
 
-    # add more service definitions when explicit configuration is needed
-    # please note that last definitions always *replace* previous ones
+    _instanceof:
+        App\CQRS\Bus\CommandHandlerInterface:
+            public: true
+            tags:
+                - { name: messenger.message_handler, bus: command.bus }
+
+        App\CQRS\Bus\QueryHandlerInterface:
+            public: true
+            tags:
+                - { name: messenger.message_handler, bus: query.bus }
+
+    App\CQRS\Bus\CommandBus:
+        arguments:
+            $bus: '@command.bus'
+    App\CQRS\Bus\QueryBus:
+        arguments:
+            $bus: '@query.bus'
+
+    RedisSessionStorage:
+        class: Redis
+        calls:
+            - method: connect
+              arguments:
+                  - '%env(REDIS_HOST)%'
+                  - '%env(int:REDIS_PORT)%'
+            - method: auth
+              arguments:
+                  - '%env(REDIS_PASSWORD)%'
 
     Symfony\Component\HttpFoundation\Session\Storage\Handler\RedisSessionHandler:
         arguments:
