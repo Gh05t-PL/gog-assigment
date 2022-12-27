@@ -1,0 +1,35 @@
+FROM php:8.1-fpm-alpine AS base
+
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+
+RUN php -r "copy('https://getcomposer.org/download/2.1.9/composer.phar', 'composer.phar');" \
+    && php -r "if (hash_file('sha256', 'composer.phar') === '4d00b70e146c17d663ad2f9a21ebb4c9d52b021b1ac15f648b4d371c04d648ba') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;" \
+    && chmod +x composer.phar \
+    && mv composer.phar /usr/local/bin/composer
+
+RUN install-php-extensions \
+    amqp \
+    mongodb \
+    redis \
+    bcmath \
+    sockets \
+    zip \
+    opcache \
+    pdo_mysql
+
+COPY .docker/config/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+
+# ##########################
+FROM base as dev-build
+# ##########################
+FROM base as prod-build
+
+COPY .docker/fpm/custom.ini /usr/local/etc/php-fpm.d/www.conf
+COPY .docker/fpm/php.ini /usr/local/etc/php/conf.d/php-add.ini
+COPY .docker/config/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+
+WORKDIR /var/www/
+COPY . /var/www/
+RUN composer install
+RUN chown -R www-data:www-data .
+USER www-data
